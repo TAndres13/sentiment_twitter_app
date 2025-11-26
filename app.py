@@ -169,12 +169,17 @@ user_input = st.text_area("Ingresa un Tweet en inglés aquí:", "I love machine 
 # Botón para clasificar
 if st.button("Clasificar Sentimiento"):
     if user_input:
+
         # 1. Obtener la predicción y confianza (como lo hiciste antes)
         etiqueta, confianza = predecir_sentimiento_con_confianza(user_input) 
         
         # 2. Obtener las palabras clave del análisis
         top_palabras = analizar_palabras_clave(user_input, word_weights, UMBRAL_PESO)
         
+        st.subheader("Resultado de la Clasificación:")
+        # Muestra la confianza formateada a dos decimales
+        st.info(f"Sentimiento: **{etiqueta}**")
+        st.metric(label="Confianza del Modelo", value=f"{confianza:.2f}%")        
         # ... Muestra el resultado y la confianza ...
         
         st.divider()
