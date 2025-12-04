@@ -8,6 +8,7 @@ from nltk.corpus import stopwords
 from nltk.stem import PorterStemmer
 from sklearn.feature_extraction.text import TfidfVectorizer  # Solo para tipos
 from sklearn.linear_model import LogisticRegression          # Solo para tipos
+from deep_translator import GoogleTranslator                 # 👈 Traducción ES → EN
 
 # ----------------------------------------
 # Configuración de página
@@ -48,6 +49,26 @@ VECTORIZER_PATH = "tfidf_vectorizer.pkl"
 
 english_stopwords = set(stopwords.words("english"))
 stemmer = PorterStemmer()
+
+
+# ----------------------------------------
+# Utilidad de traducción
+# ----------------------------------------
+def traducir_a_ingles(texto: str) -> str:
+    """
+    Traduce un texto (en cualquier idioma) a inglés usando GoogleTranslator.
+    Si falla la traducción, devuelve el texto original.
+    """
+    try:
+        traducido = GoogleTranslator(source="auto", target="en").translate(texto)
+        return traducido
+    except Exception as e:
+        # No detener la app si falla la traducción
+        st.warning(
+            "⚠️ No se pudo traducir el texto automáticamente. "
+            "Se usará el texto original para el modelo."
+        )
+        return texto
 
 
 # ----------------------------------------
@@ -167,14 +188,22 @@ def analizar_palabras_clave(texto_entrada: str,
 st.sidebar.title("ℹ️ Sobre la app")
 st.sidebar.write(
     """
-Esta aplicación clasifica el **sentimiento** de tweets en inglés
-usando **Regresión Logística** entrenada con el dataset *Sentiment140*.
+Esta aplicación clasifica el **sentimiento** de tweets en **inglés o español**  
+(usando traducción automática al inglés cuando el texto está en español),
+con un modelo de **Regresión Logística** entrenado con el dataset *Sentiment140*.
 """
 )
-st.sidebar.markdown("**Autores:")
+st.sidebar.markdown("**Autores:** Grupo IA – Estadística")
 
 st.sidebar.markdown("---")
 st.sidebar.markdown("### Ajustes del modelo")
+
+# Selector de idioma
+idioma = st.sidebar.radio(
+    "Idioma del texto a analizar",
+    ["Inglés", "Español"],
+    index=0,
+)
 
 umbral_positivo = st.sidebar.slider(
     "Umbral para clasificar como positivo",
@@ -201,27 +230,50 @@ umbral_peso_palabras = st.sidebar.slider(
 st.title("💬 Clasificador de Sentimiento de Tweets")
 st.markdown(
     """
-Esta herramienta analiza el sentimiento de un tweet en inglés
-y muestra **qué palabras tuvieron más peso** en la decisión del modelo.
+Esta herramienta analiza el sentimiento de un tweet en inglés o español  
+(y muestra **qué palabras tuvieron más peso** en la decisión del modelo).
 """
 )
 
 # Entrada de texto
+placeholder_ejemplo = (
+    "I love machine learning and Streamlit!"
+    if idioma == "Inglés"
+    else "Me encanta esta app de análisis de sentimientos."
+)
+
 user_input = st.text_area(
-    "Ingresa un Tweet en inglés:",
-    "I love machine learning and Streamlit!",
+    "Ingresa un Tweet:",
+    placeholder_ejemplo,
     height=100,
 )
+
+# Guardar en sesión el texto que ve el modelo (para usar en el expander)
+if "texto_modelo" not in st.session_state:
+    st.session_state["texto_modelo"] = user_input
 
 # Botón para clasificar
 if st.button("Clasificar Sentimiento"):
     if user_input.strip():
+        # Decidir qué texto se le pasa al modelo
+        texto_para_modelo = user_input
+
+        if idioma == "Español":
+            texto_traducido = traducir_a_ingles(user_input)
+            texto_para_modelo = texto_traducido
+
+            st.markdown("**Traducción aproximada al inglés usada por el modelo:**")
+            st.code(texto_traducido)
+
+        # Guardar para el expander (último texto realmente usado por el modelo)
+        st.session_state["texto_modelo"] = texto_para_modelo
+
         etiqueta, confianza, proba_array = predecir_sentimiento_con_confianza(
-            user_input,
+            texto_para_modelo,
             umbral=umbral_positivo,
         )
         top_palabras = analizar_palabras_clave(
-            user_input,
+            texto_para_modelo,
             word_weights,
             umbral_peso=umbral_peso_palabras,
         )
@@ -273,8 +325,17 @@ if st.button("Clasificar Sentimiento"):
 # ----------------------------------------
 st.divider()
 with st.expander("Mostrar análisis del preprocesamiento del texto"):
-    st.markdown("### Paso 1: Normalización básica")
-    texto_minusculas = user_input.lower()
+    st.markdown("### Texto original ingresado")
+    st.code(user_input)
+
+    texto_para_modelo = st.session_state.get("texto_modelo", user_input)
+
+    if idioma == "Español" and texto_para_modelo != user_input:
+        st.markdown("### Traducción aproximada utilizada por el modelo")
+        st.code(texto_para_modelo)
+
+    st.markdown("### Paso 1: Normalización básica (sobre el texto usado por el modelo)")
+    texto_minusculas = texto_para_modelo.lower()
     st.code(f"Texto en minúsculas:\n{texto_minusculas}")
 
     st.markdown("### Paso 2: Limpieza de ruido (URLs, menciones, hashtags, puntuación)")
@@ -282,16 +343,16 @@ with st.expander("Mostrar análisis del preprocesamiento del texto"):
     texto_sin_ruido = re.sub(r"[^\w\s]", "", texto_sin_ruido)
     st.code(f"Texto sin URLs/menciones/hashtags/puntuación:\n{texto_sin_ruido}")
 
-    st.markdown("### Paso 3: Stopwords y stemming")
-    texto_stemizado = limpiar_tweet_en_ingles(user_input)
+    st.markdown("### Paso 3: Stopwords y stemming (en inglés)")
+    texto_stemizado = limpiar_tweet_en_ingles(texto_para_modelo)
     st.code(f"Texto final enviado al vectorizador (TF-IDF):\n{texto_stemizado}")
 
     st.markdown("### Paso 4: Métricas del texto")
     col1, col2 = st.columns(2)
     col1.metric("Longitud original", f"{len(user_input)} caracteres")
-    col2.metric("Tokens finales", f"{len(texto_stemizado.split())} palabras")
+    col2.metric("Tokens finales (texto del modelo)", f"{len(texto_stemizado.split())} palabras")
 
-    st.info("El modelo recibe este texto procesado y lo convierte en un vector TF-IDF.")
+    st.info("El modelo siempre recibe el texto en inglés procesado y lo convierte en un vector TF-IDF.")
 
 
 # ----------------------------------------
@@ -303,7 +364,8 @@ st.header("📂 Análisis masivo de tweets (CSV)")
 st.markdown(
     """
 Sube un archivo **CSV** que contenga una columna llamada `text`
-con los tweets que quieres analizar.
+con los tweets que quieres analizar.  
+> **Nota:** actualmente se asume que los textos están en inglés.
 """
 )
 
@@ -316,7 +378,7 @@ if uploaded_file is not None:
         if "text" not in df.columns:
             st.error("El CSV debe tener una columna llamada `text`.")
         else:
-            # Preprocesamiento
+            # Preprocesamiento (asumiendo texto en inglés)
             df["texto_limpio"] = df["text"].astype(str).apply(limpiar_tweet_en_ingles)
             X = vectorizer.transform(df["texto_limpio"])
             proba = model.predict_proba(X)
@@ -353,11 +415,13 @@ with st.expander("Detalles técnicos del modelo"):
 - **Representación del texto:** TF–IDF (unigramas y posiblemente bigramas).
 - **Dataset de entrenamiento:** [Sentiment140](http://help.sentiment140.com/for-students)
   con tweets etiquetados automáticamente.
-- **Preprocesamiento:**
+- **Preprocesamiento (texto del modelo):**
   - Minúsculas  
   - Eliminación de URLs, menciones, hashtags y puntuación  
   - Stopwords en inglés (salvando `not`)  
   - Stemming con `PorterStemmer`  
+- Para textos en español, primero se realiza una **traducción automática al inglés**
+  y luego se aplica exactamente el mismo pipeline.
 - Cada coeficiente del modelo indica **qué tanto** una palabra o bigrama
   empuja la predicción hacia lo positivo o lo negativo.
 """
