@@ -193,7 +193,7 @@ Esta aplicación clasifica el **sentimiento** de tweets en **inglés o español*
 con un modelo de **Regresión Logística** entrenado con el dataset *Sentiment140*.
 """
 )
-st.sidebar.markdown("**Autores:** Grupo IA – Estadística")
+st.sidebar.markdown("**Autores:** Miguel Angel Hernandez Lizarazo , Jesus Santiago Poveda, Andres Felipe Torres Pinto")
 
 st.sidebar.markdown("---")
 st.sidebar.markdown("### Ajustes del modelo")
