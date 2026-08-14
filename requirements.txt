@@ -1,6 +1,6 @@
-streamlit
-joblib
-pandas
-scikit-learn
-nltk
+streamlit==1.52.1
+joblib==1.5.2
+pandas==2.3.3
+scikit-learn==1.6.1
+nltk==3.9.2
 deep-translator==1.11.4
