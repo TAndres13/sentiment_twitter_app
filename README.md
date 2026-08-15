@@ -189,6 +189,13 @@ metrics.json
 * El análisis en español depende de una traducción automática previa.
 * Expresiones ambiguas, sarcasmo, ironía y lenguaje altamente contextual pueden ser difíciles de clasificar mediante un modelo basado en TF-IDF.
 
+## 🌐 Demo
+
+La aplicación está disponible públicamente en Streamlit:
+
+[Probar la aplicación](https://sentimenttwitterapp-hydnbbscqx5wwibtqcmcbt.streamlit.app/)
+
+
 ## 👥 Autores
 
 Proyecto académico desarrollado por:
