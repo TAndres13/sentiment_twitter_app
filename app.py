@@ -412,7 +412,7 @@ with st.expander("Detalles técnicos del modelo"):
     st.markdown(
         """
 - **Modelo:** Regresión Logística binaria (`0 = negativo`, `4 = positivo`).
-- **Representación del texto:** TF–IDF (unigramas y posiblemente bigramas).
+- **Representación del texto:** TF–IDF (unigramas y bigramas).
 - **Dataset de entrenamiento:** [Sentiment140](http://help.sentiment140.com/for-students)
   con tweets etiquetados automáticamente.
 - **Preprocesamiento (texto del modelo):**
